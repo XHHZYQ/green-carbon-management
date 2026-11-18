@@ -1,0 +1,58 @@
+# ---------- 通用 ----------
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.screenshots/
+docs/*.docx
+.trae/
+
+# ---------- Python / 后端 ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.sqlite3
+backend/.env
+
+# uv
+.uv/
+uv.lock.bak
+
+# ---------- Node / 前端 ----------
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/.vite-inspect/
+*.local
+.pnpm-store/
+.npm/
+.eslintcache
+frontend/auto-imports.d.ts
+frontend/components.d.ts
+frontend/.env.local
+frontend/.env.*.local
+
+# ---------- 构建产物 / 导出 ----------
+backend/exports/
+backend/uploads/
+*.zip
