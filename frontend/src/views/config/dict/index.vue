@@ -240,7 +240,7 @@ onMounted(async () => {
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="120" fixed="right">
+                <el-table-column label="操作" width="130" fixed="right">
                   <template #default="{ row }">
                     <el-button link type="primary" @click.stop="openTypeDialog(row)">编辑</el-button>
                     <el-button link type="danger" @click.stop="removeType(row)">删除</el-button>
@@ -266,7 +266,7 @@ onMounted(async () => {
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="120" fixed="right">
+                <el-table-column label="操作" width="130" fixed="right">
                   <template #default="{ row }">
                     <el-button link type="primary" @click="openItemDialog(row)">编辑</el-button>
                     <el-button link type="danger" @click="removeItem(row)">删除</el-button>

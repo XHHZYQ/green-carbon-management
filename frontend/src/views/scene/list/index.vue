@@ -179,7 +179,7 @@ async function submitSchedule() {
         <el-table-column label="最近执行" width="170">
           <template #default="{ row }">{{ formatDateTime(row.last_exec_time) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="270" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="execScene(row)">执行</el-button>
             <el-button link type="primary" @click="openActions(row)">动作</el-button>
@@ -229,7 +229,7 @@ async function submitSchedule() {
         <el-table-column prop="point_key" label="控制点" width="120" />
         <el-table-column prop="target_value" label="目标值" width="90" />
         <el-table-column prop="delay_sec" label="延迟(秒)" width="90" />
-        <el-table-column label="操作" width="120">
+        <el-table-column label="操作" width="130">
           <template #default="{ row }">
             <el-button link type="primary" @click="openActionEdit(row)">编辑</el-button>
             <el-button link type="danger" @click="removeAction(row)">删除</el-button>

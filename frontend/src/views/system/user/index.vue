@@ -152,7 +152,7 @@ onMounted(async () => {
         <el-table-column label="最近登录" width="170">
           <template #default="{ row }">{{ formatDateTime(row.last_login_time) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
             <el-button link type="primary" @click="toggleStatus(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button>

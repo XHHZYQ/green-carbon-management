@@ -181,7 +181,7 @@ onMounted(async () => {
         <el-table-column label="最近推送" width="170">
           <template #default="{ row }">{{ formatDateTime(row.last_send_time) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
+        <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="run(row)">立即执行</el-button>
             <el-button link type="primary" @click="openDialog(row)">编辑</el-button>

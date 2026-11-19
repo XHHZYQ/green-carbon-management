@@ -350,7 +350,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column prop="default_value" label="默认值" min-width="110" />
           <el-table-column prop="sort_no" label="排序" width="70" />
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="openPmDialog(row)">编辑</el-button>
               <el-button link type="danger" @click="removePm(row)">删除</el-button>
