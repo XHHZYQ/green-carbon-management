@@ -12,6 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.services.collect_sim import simulate_collect
 from app.services.control_service import drive_commands, run_due_timed_tasks
+from app.services.scene_service import evaluate_link_rules, run_due_scene_schedules
 
 logger = logging.getLogger("scheduler")
 
@@ -28,6 +29,12 @@ CONTROL_EXEC_INTERVAL_SEC = 2
 
 # 定时控制任务检查周期（秒）
 CONTROL_TIMED_INTERVAL_SEC = 10
+
+# 场景定时执行检查周期（秒）
+SCENE_TIMED_INTERVAL_SEC = 10
+
+# 联动规则评估周期（秒）
+SCENE_LINK_INTERVAL_SEC = 20
 
 # 是否为首次模拟采集（首次需补齐过期数据）
 _first_collect = True
@@ -65,6 +72,26 @@ async def _control_timed() -> None:
             logger.debug("定时控制下发 %s 条", count)
     except Exception:  # noqa: BLE001
         logger.exception("定时控制任务下发失败")
+
+
+async def _scene_timed() -> None:
+    """场景定时任务到点执行。"""
+    try:
+        count = await run_due_scene_schedules()
+        if count:
+            logger.debug("场景定时执行 %s 个", count)
+    except Exception:  # noqa: BLE001
+        logger.exception("场景定时执行失败")
+
+
+async def _scene_link() -> None:
+    """联动规则命中自动执行。"""
+    try:
+        count = await evaluate_link_rules()
+        if count:
+            logger.debug("联动规则命中执行 %s 条", count)
+    except Exception:  # noqa: BLE001
+        logger.exception("联动规则评估失败")
 
 
 def register_jobs() -> None:
@@ -105,6 +132,24 @@ def register_jobs() -> None:
             replace_existing=True,
         )
         REGISTERED_JOBS["control_timed"] = "定时控制任务下发"
+
+    if not scheduler.get_job("scene_timed"):
+        scheduler.add_job(
+            _scene_timed,
+            trigger=IntervalTrigger(seconds=SCENE_TIMED_INTERVAL_SEC),
+            id="scene_timed",
+            replace_existing=True,
+        )
+        REGISTERED_JOBS["scene_timed"] = "场景定时执行"
+
+    if not scheduler.get_job("scene_link"):
+        scheduler.add_job(
+            _scene_link,
+            trigger=IntervalTrigger(seconds=SCENE_LINK_INTERVAL_SEC),
+            id="scene_link",
+            replace_existing=True,
+        )
+        REGISTERED_JOBS["scene_link"] = "联动规则评估执行"
 
 
 def start_scheduler() -> None:
