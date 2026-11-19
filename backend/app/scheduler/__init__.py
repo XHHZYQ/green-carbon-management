@@ -11,6 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.services.collect_sim import simulate_collect
+from app.services.control_service import drive_commands, run_due_timed_tasks
 
 logger = logging.getLogger("scheduler")
 
@@ -21,6 +22,12 @@ REGISTERED_JOBS: dict[str, str] = {}
 
 # 实时数据模拟采集周期（秒）
 COLLECT_SIM_INTERVAL_SEC = 15
+
+# 控制指令状态流转周期（秒）
+CONTROL_EXEC_INTERVAL_SEC = 2
+
+# 定时控制任务检查周期（秒）
+CONTROL_TIMED_INTERVAL_SEC = 10
 
 # 是否为首次模拟采集（首次需补齐过期数据）
 _first_collect = True
@@ -40,6 +47,24 @@ async def _collect_sim() -> None:
         logger.debug("模拟采集写入 %s 条", count)
     except Exception:  # noqa: BLE001
         logger.exception("模拟采集任务执行失败")
+
+
+async def _control_exec() -> None:
+    """控制指令状态流转：待下发 → 下发中 → 成功/失败/超时。"""
+    try:
+        await drive_commands()
+    except Exception:  # noqa: BLE001
+        logger.exception("控制指令状态流转失败")
+
+
+async def _control_timed() -> None:
+    """定时控制任务到点下发。"""
+    try:
+        count = await run_due_timed_tasks()
+        if count:
+            logger.debug("定时控制下发 %s 条", count)
+    except Exception:  # noqa: BLE001
+        logger.exception("定时控制任务下发失败")
 
 
 def register_jobs() -> None:
@@ -62,6 +87,24 @@ def register_jobs() -> None:
             next_run_time=datetime.now(),  # 启动即执行一次
         )
         REGISTERED_JOBS["collect_sim"] = "实时数据模拟采集"
+
+    if not scheduler.get_job("control_exec"):
+        scheduler.add_job(
+            _control_exec,
+            trigger=IntervalTrigger(seconds=CONTROL_EXEC_INTERVAL_SEC),
+            id="control_exec",
+            replace_existing=True,
+        )
+        REGISTERED_JOBS["control_exec"] = "控制指令状态流转"
+
+    if not scheduler.get_job("control_timed"):
+        scheduler.add_job(
+            _control_timed,
+            trigger=IntervalTrigger(seconds=CONTROL_TIMED_INTERVAL_SEC),
+            id="control_timed",
+            replace_existing=True,
+        )
+        REGISTERED_JOBS["control_timed"] = "定时控制任务下发"
 
 
 def start_scheduler() -> None:
