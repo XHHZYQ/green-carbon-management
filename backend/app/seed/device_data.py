@@ -27,6 +27,7 @@ from app.models.dev import (
     DevPointTemplate,
     DevPointTemplateItem,
 )
+from app.models.mon import MonTopology, MonTopologyNode
 from app.models.sys import SysUser
 
 random.seed(20260101)
@@ -195,8 +196,9 @@ PROTO_DEFAULTS = {
 async def _reset(session: AsyncSession) -> None:
     """清理设备域数据（按外键依赖顺序）。"""
     for model in (
-        DevDataPatch, DevData, DevAccessLog, DevCollectTask, DevControlPoint, DevPoint,
-        DevPointTemplateItem, DevPointTemplate, DevDeviceConn, DevDevice, DevArea,
+        MonTopologyNode, MonTopology, DevDataPatch, DevData, DevAccessLog, DevCollectTask,
+        DevControlPoint, DevPoint, DevPointTemplateItem, DevPointTemplate, DevDeviceConn,
+        DevDevice, DevArea,
     ):
         await session.execute(delete(model))
     await session.commit()
@@ -403,6 +405,62 @@ async def seed_device_domain(session: AsyncSession) -> dict[str, int]:
     ))
     log_count += 1
     result["access_logs"] = log_count
+
+    # 近实时数据（最近 30 分钟，每分钟一条，供实时曲线使用）
+    recent_start = (now - timedelta(minutes=29)).replace(second=0, microsecond=0)
+    recent_batch: list[DevData] = []
+    for pt, kind in points:
+        lo, hi = float(pt.range_min or 0), float(pt.range_max or 100)
+        for m in range(30):
+            ts = recent_start + timedelta(minutes=m)
+            recent_batch.append(DevData(
+                device_id=pt.device_id, point_id=pt.id, collect_value=_gen_value(kind, lo, hi, ts.hour, None),
+                unit=pt.unit, data_quality="normal", collect_time=ts,
+            ))
+    session.add_all(recent_batch)
+    await session.flush()
+    result["data"] = data_count + len(recent_batch)
+
+    # 组态图 / 平面图
+    def points_of(dev: DevDevice) -> list[DevPoint]:
+        return [p for p, _ in points if p.device_id == dev.id]
+
+    def devices_in(area_code: str) -> list[DevDevice]:
+        area = area_map.get(area_code)
+        return [d for d in devices if area and d.area_id == area.id] if area else []
+
+    topo_count = node_count = 0
+
+    async def add_topo(code, name, ttype, area_code, bg, remark, dev_list, cols=3):
+        nonlocal topo_count, node_count
+        area = area_map.get(area_code) if area_code else None
+        topo = MonTopology(
+            topo_code=code, topo_name=name, topo_type=ttype,
+            area_id=area.id if area else None, background=bg, remark=remark, status=1, created_at=now,
+        )
+        session.add(topo)
+        await session.flush()
+        topo_count += 1
+        for idx, dev in enumerate(dev_list):
+            dev_points = points_of(dev)
+            pt = dev_points[0] if dev_points else None
+            col, row = idx % cols, idx // cols
+            session.add(MonTopologyNode(
+                topo_id=topo.id, node_key=f"n{idx + 1}", node_type="device",
+                device_id=dev.id, point_id=pt.id if pt else None,
+                pos_x=80 + col * 200, pos_y=70 + row * 140, width=160, height=84,
+                style_json={"color": "#2f7cf6", "border": "#1f6fe0"},
+                link_json={"prev": f"n{idx}" if idx > 0 else None},
+            ))
+            node_count += 1
+        await session.flush()
+
+    await add_topo("TOPO_ESS", "储能站系统组态", "topology", "AREA_ESS", None, "储能站设备监视组态", devices_in("AREA_ESS"), cols=2)
+    await add_topo("TOPO_PV", "光伏电站系统组态", "topology", "AREA_PV", None, "光伏发电系统监视组态", devices_in("AREA_PV"), cols=2)
+    await add_topo("TOPO_PLAN_F1", "一层配电间平面图", "plan", "AREA_F1", "grid", "一层配电间设备定位", devices_in("AREA_F1"), cols=3)
+    await add_topo("TOPO_PLAN_F3", "三层空调机房平面图", "plan", "AREA_F3", "grid", "三层空调机房设备定位", devices_in("AREA_F3"), cols=3)
+    result["topologies"] = topo_count
+    result["topology_nodes"] = node_count
 
     await session.commit()
     return result

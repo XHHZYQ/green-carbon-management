@@ -217,6 +217,7 @@ MENU_TREE = [
             {"name": "实时监控总览", "type": "menu", "path": "/monitor/overview", "component": "monitor/overview/index", "perm": "monitor:overview:view"},
             {"name": "设备组态图", "type": "menu", "path": "/monitor/topology", "component": "monitor/topology/index", "perm": "monitor:topology:view"},
             {"name": "区域平面图", "type": "menu", "path": "/monitor/plan", "component": "monitor/plan/index", "perm": "monitor:plan:view"},
+            {"name": "编辑组态", "type": "button", "perm": "monitor:topology:edit"},
         ],
     },
     {
@@ -402,15 +403,27 @@ async def seed_users(session: AsyncSession) -> int:
     return len(USERS)
 
 
+def _menu_key(node: dict) -> str:
+    """菜单唯一标识：有路由用路由，按钮用权限编码。"""
+    return node.get("path") or f"perm:{node.get('perm')}"
+
+
 async def seed_menus(session: AsyncSession) -> int:
-    if not await _is_empty(session, SysMenu):
-        return 0
+    """幂等写入菜单：已存在则跳过，缺失则补写（支持增量新增菜单）。"""
+    existing = list((await session.execute(select(SysMenu))).scalars().all())
+    by_key = {_menu_key({"path": m.route_path, "perm": m.perm_code}): m for m in existing}
     total = 0
 
     # 递归写入（dir/menu → button），通过 flush 获取父 id
     async def _walk(nodes: list[dict], parent_id: int | None) -> None:
         nonlocal total
         for idx, node in enumerate(nodes):
+            key = _menu_key(node)
+            current = by_key.get(key)
+            if current:
+                if node.get("children"):
+                    await _walk(node["children"], current.id)
+                continue
             menu = SysMenu(
                 parent_id=parent_id,
                 menu_name=node["name"],
@@ -425,6 +438,7 @@ async def seed_menus(session: AsyncSession) -> int:
             )
             session.add(menu)
             await session.flush()
+            by_key[key] = menu
             total += 1
             if node.get("children"):
                 await _walk(node["children"], menu.id)
@@ -435,8 +449,7 @@ async def seed_menus(session: AsyncSession) -> int:
 
 
 async def seed_role_menu(session: AsyncSession) -> int:
-    if not await _is_empty(session, SysRoleMenu):
-        return 0
+    existing = {(rm.role_id, rm.menu_id) for rm in (await session.execute(select(SysRoleMenu))).scalars().all()}
     roles = {r.role_code: r.id for r in (await session.execute(select(SysRole))).scalars().all()}
     menus = list((await session.execute(select(SysMenu))).scalars().all())
     by_id = {m.id: m for m in menus}
@@ -466,6 +479,8 @@ async def seed_role_menu(session: AsyncSession) -> int:
         if not role_id:
             continue
         for menu_id in _collect(prefixes):
+            if (role_id, menu_id) in existing:
+                continue
             session.add(SysRoleMenu(role_id=role_id, menu_id=menu_id))
             count += 1
     await session.commit()
