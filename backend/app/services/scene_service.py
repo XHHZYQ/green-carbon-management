@@ -343,6 +343,8 @@ async def delete_link_rule(session: AsyncSession, rule_id: int) -> None:
     rule = await session.get(SceneLinkRule, rule_id)
     if not rule:
         raise BizException("联动规则不存在")
+    # 保留历史执行记录，解除其对规则的引用以满足外键约束
+    await session.execute(update(SceneExecLog).where(SceneExecLog.rule_id == rule_id).values(rule_id=None))
     await session.delete(rule)
     await session.commit()
 
