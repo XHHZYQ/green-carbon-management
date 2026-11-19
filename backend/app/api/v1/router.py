@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    alarm,
     auth,
     carbon,
     config,
@@ -12,10 +13,13 @@ from app.api.v1 import (
     fee,
     menus,
     monitor,
+    notify,
     points,
     price,
+    quota,
     scene,
     system,
+    work_order,
 )
 
 api_router = APIRouter()
@@ -32,3 +36,7 @@ api_router.include_router(energy.router)
 api_router.include_router(price.router)
 api_router.include_router(fee.router)
 api_router.include_router(carbon.router)
+api_router.include_router(notify.router)
+api_router.include_router(alarm.router)
+api_router.include_router(work_order.router)
+api_router.include_router(quota.router)
