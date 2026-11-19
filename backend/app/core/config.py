@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # 图形验证码开关：开发环境可设为 false 跳过验证码
+    CAPTCHA_ENABLED: bool = True
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

@@ -3,15 +3,20 @@
 import logging
 from contextlib import asynccontextmanager
 
+import fastapi.routing
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
-from app.core.response import success
+from app.core.response import json_encode, success
 from app.db.session import create_db_and_tables
+from app.middleware import OperLogMiddleware
 from app.scheduler import shutdown_scheduler, start_scheduler
+
+# 统一响应 JSON 编码：时间统一为 YYYY-MM-dd hh:mm:ss
+fastapi.routing.jsonable_encoder = json_encode
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("app")
@@ -48,6 +53,8 @@ app.add_middleware(
 )
 
 register_exception_handlers(app)
+
+app.add_middleware(OperLogMiddleware, prefix=settings.API_PREFIX)
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
 

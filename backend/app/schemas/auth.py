@@ -31,8 +31,9 @@ class UserInfo(BaseModel):
 
 
 class CaptchaResponse(BaseModel):
-    captcha_key: str
-    captcha_image: str
+    captcha_key: str = ""
+    captcha_image: str = ""
+    enabled: bool = True
 
 
 class ChangePasswordRequest(BaseModel):

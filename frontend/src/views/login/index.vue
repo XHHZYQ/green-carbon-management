@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { getCaptchaApi } from '@/api/auth'
@@ -12,6 +12,7 @@ const userStore = useUserStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const captchaImage = ref('')
+const captchaEnabled = ref(true)
 
 const form = reactive({
   username: 'admin',
@@ -20,14 +21,23 @@ const form = reactive({
   captcha_code: '',
 })
 
-const rules: FormRules = {
+const rules = computed<FormRules>(() => ({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  captcha_code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
-}
+  ...(captchaEnabled.value
+    ? { captcha_code: [{ required: true, message: '请输入验证码', trigger: 'blur' }] }
+    : {}),
+}))
 
 async function refreshCaptcha() {
   const res = await getCaptchaApi()
+  captchaEnabled.value = res.enabled !== false
+  if (!captchaEnabled.value) {
+    captchaImage.value = ''
+    form.captcha_key = ''
+    form.captcha_code = ''
+    return
+  }
   captchaImage.value = res.captcha_image
   form.captcha_key = res.captcha_key
   form.captcha_code = ''
@@ -77,7 +87,7 @@ onMounted(refreshCaptcha)
             show-password
           />
         </el-form-item>
-        <el-form-item prop="captcha_code">
+        <el-form-item v-if="captchaEnabled" prop="captcha_code">
           <div class="captcha-row">
             <el-input v-model="form.captcha_code" placeholder="请输入验证码" :prefix-icon="'Key'" />
             <img class="captcha-img" :src="captchaImage" alt="验证码" title="点击刷新" @click="refreshCaptcha" />

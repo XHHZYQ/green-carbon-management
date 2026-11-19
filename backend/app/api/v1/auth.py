@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Request
 
+from app.core.config import settings
 from app.core.deps import CurrentUser, SessionDep
 from app.core.response import success
 from app.core.security import generate_captcha, verify_captcha
@@ -17,13 +18,15 @@ router = APIRouter(prefix="/auth", tags=["认证"])
 
 @router.get("/captcha", summary="获取图形验证码")
 async def get_captcha():
+    if not settings.CAPTCHA_ENABLED:
+        return success({"captcha_key": "", "captcha_image": "", "enabled": False})
     key, image = generate_captcha()
-    return success({"captcha_key": key, "captcha_image": image})
+    return success({"captcha_key": key, "captcha_image": image, "enabled": True})
 
 
 @router.post("/login", summary="账号密码登录")
 async def login(payload: LoginRequest, request: Request, session: SessionDep):
-    if payload.captcha_key and not verify_captcha(payload.captcha_key, payload.captcha_code or ""):
+    if settings.CAPTCHA_ENABLED and payload.captcha_key and not verify_captcha(payload.captcha_key, payload.captcha_code or ""):
         return {"code": 1, "message": "验证码错误或已过期", "data": None}
     ip = request.client.host if request.client else ""
     user = await auth_service.authenticate(session, payload.username, payload.password, ip=ip)

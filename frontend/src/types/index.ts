@@ -50,4 +50,5 @@ export interface LoginResult {
 export interface CaptchaResult {
   captcha_key: string
   captcha_image: string
+  enabled?: boolean
 }
