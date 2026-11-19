@@ -8,6 +8,7 @@ from app.api.v1 import (
     carbon,
     config,
     control,
+    dashboard,
     devices,
     energy,
     fee,
@@ -17,6 +18,7 @@ from app.api.v1 import (
     points,
     price,
     quota,
+    report,
     scene,
     system,
     work_order,
@@ -40,3 +42,5 @@ api_router.include_router(notify.router)
 api_router.include_router(alarm.router)
 api_router.include_router(work_order.router)
 api_router.include_router(quota.router)
+api_router.include_router(dashboard.router)
+api_router.include_router(report.router)
